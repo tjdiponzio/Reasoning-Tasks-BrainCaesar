@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Executive Functioning Task - 10 Trials</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { user-select: none; -webkit-user-select: none; }
+        button, select, input, label { touch-action: manipulation; }
+    </style>
+</head>
+<body class="bg-[#F4F6F7] text-slate-800 font-sans min-h-screen flex flex-col items-center p-2 sm:p-6">
+
+  <div id="app" class="w-full max-w-2xl bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200 flex flex-col h-[90vh] sm:h-[880px]">
+    <!-- Dynamic Content Injected Here -->
+  </div>
+
+  <script>
+    // ==========================================
+    // CONFIGURATION & CONSTANTS
+    // ==========================================
+    const SHAPES = ["circle", "square", "triangle", "star"];
+    const COLORS = {
+        "Red": "#E74C3C",
+        "Blue": "#3498DB",
+        "Green": "#2ECC71",
+        "Yellow": "#F1C40F"
+    };
+    const COLOR_NAMES = Object.keys(COLORS);
+    const TOTAL_TRIALS = 10;
+    const MAX_TURNS_PER_TRIAL = 10;
+
+    // ==========================================
+    // STATE MANAGEMENT
+    // ==========================================
+    let state = {
+        currentTrial: 1,
+        trialResults: [],
+        secretCode: [],
+        currentGuess: Array(4).fill(null).map(() => ({ shape: SHAPES[0], color: COLOR_NAMES[0] })),
+        turn: 0,
+        previousGuess: null,
+        previousFeedback: null,
+        validFeedbackTransitions: 0,
+        ruleCompliantTransitions: 0,
+        trialStartTime: 0,
+        history: [],
+        isFinished: false,
+        fullReportText: ""
+    };
+
+    // ==========================================
+    // MATH & SHAPE HELPERS
+    // ==========================================
+    function calculateStats(data) {
+        if (!data || data.length === 0) return [0.0, 0.0];
+        const mean = data.reduce((a, b) => a + b, 0) / data.length;
+        const variance = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / data.length;
+        return [mean, Math.sqrt(variance)];
+    }
+
+    function generateSVG(shape, colorHex, size = 36) {
+        const cx = size / 2;
+        const cy = size / 2;
+        const r = size * 0.35;
+        let svgContent = '';
+
+        if (shape === 'circle') {
+            svgContent = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${colorHex}" stroke="#333333" stroke-width="1.5"/>`;
+        } else if (shape === 'square') {
+            const side = r * 1.6;
+            svgContent = `<rect x="${cx - side/2}" y="${cy - side/2}" width="${side}" height="${side}" fill="${colorHex}" stroke="#333333" stroke-width="1.5" rx="2"/>`;
+        } else if (shape === 'triangle') {
+            const pts = `${cx},${cy - r} ${cx + r},${cy + r*0.8} ${cx - r},${cy + r*0.8}`;
+            svgContent = `<polygon points="${pts}" fill="${colorHex}" stroke="#333333" stroke-width="1.5"/>`;
+        } else if (shape === 'star') {
+            let pts = [];
+            for (let i = 0; i < 10; i++) {
+                const rad = (i % 2 === 0) ? r : r * 0.45;
+                const angle = i * Math.PI / 5 - Math.PI / 2;
+                pts.push(`${cx + rad * Math.cos(angle)},${cy + rad * Math.sin(angle)}`);
+            }
+            svgContent = `<polygon points="${pts.join(' ')}" fill="${colorHex}" stroke="#333333" stroke-width="1.5"/>`;
+        }
+
+        return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="overflow-visible">${svgContent}</svg>`;
+    }
+
+    // ==========================================
