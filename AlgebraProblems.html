@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Algebra Executive Function Task</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { user-select: none; -webkit-user-select: none; }
+        button, select, input { touch-action: manipulation; }
+    </style>
+</head>
+<body class="bg-[#F4F6F7] text-slate-800 font-sans min-h-screen flex flex-col items-center p-2 sm:p-6">
+
+  <div id="app" class="w-full max-w-xl bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200 flex flex-col min-h-[550px]">
+    <!-- Dynamic Content Injected Here -->
+  </div>
+
+  <script>
+    // ==========================================
+    // PREDEFINED ALGEBRA PROBLEMS DATASET
+    // ==========================================
+    const ALGEBRA_PROBLEMS = [
+        ["x + 5 = 12", 7],
+        ["3x = 18", 6],
+        ["2x - 4 = 10", 7],
+        ["5x + 3 = 23", 4],
+        ["4x - 8 = 16", 6],
+        ["x - 9 = 3", 12],
+        ["6x = 42", 7],
+        ["3x + 5 = 20", 5],
+        ["7x - 14 = 21", 5],
+        ["2x + 10 = 24", 7],
+        ["2x + 5 = 15", 5],
+        ["3x + 4x = 21", 3],
+        ["5x - 10 = 10", 4],
+        ["6x + 9 = 51", 7],
+        ["4x - 8 = 16", 6],
+        ["4x + 9 = 37", 7],
+        ["7x = 42", 6],
+        ["6x + 6 = 36", 5],
+        ["8x - 2 = 38", 5],
+        ["3x + 10 = 31", 7],
+        ["x + 8 = 15", 7],
+        ["4x = 24", 6],
+        ["3x - 6 = 12", 6],
+        ["2x + 7 = 19", 6],
+        ["5x - 5 = 20", 5],
+        ["x - 4 = 8", 12],
+        ["9x = 54", 6],
+        ["4x + 2 = 26", 6],
+        ["3x - 9 = 15", 8],
+        ["6x + 4 = 40", 6],
+        ["x + 11 = 20", 9],
+        ["5x = 35", 7],
+        ["2x - 6 = 8", 7],
+        ["4x + 5 = 25", 5],
+        ["3x - 3 = 18", 7],
+        ["x - 7 = 5", 12],
+        ["8x = 64", 8],
+        ["2x + 8 = 22", 7],
+        ["5x - 15 = 10", 5],
+        ["7x + 3 = 38", 5],
+        ["x + 12 = 25", 13],
+        ["4x = 32", 8],
+        ["3x - 5 = 16", 7],
+        ["6x + 12 = 48", 6],
+        ["2x - 10 = 6", 8],
+        ["x - 6 = 6", 12],
+        ["9x = 81", 9],
+        ["5x + 10 = 40", 6],
+        ["3x - 7 = 14", 7],
+        ["4x + 8 = 36", 7]
+    ];
+
+    // ==========================================
+    // STATE MANAGEMENT
+    // ==========================================
+    let state = {
+        currentProblemIdx: 0,
+        results: [],
+        currentXSolution: 0,
+        startTime: 0,
+        answered: false
+    };
+
+    function shuffle(array) {
+        let arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    // ==========================================
+    // GAME CONTROLLER
+    // ==========================================
+    function loadNextProblem() {
+        if (state.currentProblemIdx >= ALGEBRA_PROBLEMS.length) {
+            showSummary();
+            return;
+        }
+
+        state.answered = false;
+        const [equationStr, solution] = ALGEBRA_PROBLEMS[state.currentProblemIdx];
+        state.currentXSolution = solution;
+
+        // Generate options (1 correct + 3 distractors)
+        let options = [solution];
+        while (options.length < 4) {
+            let distractor = solution + [-4, -3, -2, -1, 1, 2, 3, 4][Math.floor(Math.random() * 8)];
+            if (!options.includes(distractor)) {
+                options.push(distractor);
+            }
+        }
+        options = shuffle(options);
+
+        renderProblemUI(equationStr, options);
+        state.startTime = performance.now();
+    }
+
+    function submitAnswer(selectedVal, btnElement) {
+        if (state.answered) return;
+        state.answered = true;
+
+        const rt = performance.now() - state.startTime;
+        const isCorrect = (selectedVal === state.currentXSolution);
+
+        state.results.push({ correct: isCorrect, rt: rt });
+
+        // Highlight buttons
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            const val = parseInt(btn.dataset.val);
+            if (val === state.currentXSolution) {
+                btn.className = "option-btn w-full bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl shadow transition-all border border-emerald-600";
+            } else if (val === selectedVal && !isCorrect) {
+                btn.className = "option-btn w-full bg-rose-500 text-white font-bold py-3.5 px-4 rounded-xl shadow transition-all border border-rose-600";
+            } else {
+                btn.className = "option-btn w-full bg-slate-100 text-slate-400 py-3.5 px-4 rounded-xl border border-slate-200 opacity-60";
+            }
+        });
+
+        const feedbackEl = document.getElementById('feedback-text');
+        if (isCorrect) {
+            feedbackEl.innerHTML = `<span class="text-emerald-600 font-bold">Correct! 🎉</span>`;
+        } else {
+            feedbackEl.innerHTML = `<span class="text-rose-600 font-bold">Incorrect. The correct answer was x = ${state.currentXSolution}</span>`;
+        }
+
+        setTimeout(() => {
+            state.currentProblemIdx++;
+            loadNextProblem();
+        }, 1400);
+    }
+
+    // ==========================================
+    // UI RENDERING
+    // ==========================================
+    function renderProblemUI(equationStr, options) {
+        const total = ALGEBRA_PROBLEMS.length;
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <!-- Header Bar -->
+            <div class="bg-[#2C3E50] py-3 px-4 text-center text-white shrink-0">
+                <h1 class="text-base sm:text-lg font-bold tracking-wide">Algebra Executive Function Task</h1>
+                <p class="text-xs sm:text-sm text-slate-300 mt-0.5">Problem ${state.currentProblemIdx + 1} of ${total}</p>
+            </div>
+
+            <!-- Main Container -->
+            <div class="flex-grow p-4 sm:p-8 flex flex-col items-center justify-center space-y-6">
+                <div class="w-full max-w-md text-center space-y-6">
+                    
+                    <!-- Equation Card -->
+                    <div class="bg-white border-2 border-slate-200 p-6 rounded-2xl shadow-sm space-y-2">
+                        <span class="text-xs sm:text-sm font-semibold text-slate-400 italic block">Solve for x:</span>
+                        <div class="font-mono text-2xl sm:text-3xl font-extrabold text-[#2C3E50] tracking-wider py-2">
+                            ${equationStr}
+                        </div>
+                    </div>
+
+                    <!-- Multiple-Choice Options Grid (2x2) -->
+                    <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                        ${options.map(val => `
+                            <button data-val="${val}" onclick="submitAnswer(${val}, this)" class="option-btn w-full bg-white hover:bg-slate-50 active:scale-[0.98] text-[#2C3E50] font-bold text-base sm:text-lg py-3.5 px-4 rounded-xl shadow-sm border-2 border-slate-200 transition-all">
+                                x = ${val}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div id="feedback-text" class="min-h-[28px] text-sm font-bold"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function showSummary() {
+        const total = state.results.length;
+        const correctCnt = state.results.filter(r => r.correct).length;
+        const acc = total > 0 ? (correctCnt / total) * 100 : 0;
+        const meanRt = total > 0 ? state.results.reduce((a, b) => a + b.rt, 0) / total : 0;
+
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div class="bg-[#2C3E50] py-3 px-4 text-center text-white shrink-0">
+                <h1 class="text-base sm:text-lg font-bold tracking-wide">Algebra Executive Function Task</h1>
+                <p class="text-xs sm:text-sm text-emerald-400 mt-0.5">Task Complete</p>
+            </div>
+
+            <div class="flex-grow p-4 sm:p-8 flex flex-col items-center justify-center space-y-6">
+                <div class="w-full max-w-md bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-5 text-center">
+                    <h2 class="text-xl sm:text-2xl font-bold text-[#2C3E50]">Performance Summary</h2>
+
+                    <div class="space-y-2 text-sm sm:text-base text-slate-700">
+                        <p>Accuracy: <strong class="text-slate-900">${acc.toFixed(1)}% (${correctCnt}/${total} correct)</strong></p>
+                        <p>Mean Response Time: <strong class="text-slate-900">${meanRt.toFixed(0)} ms (${(meanRt / 1000).toFixed(2)}s per problem)</strong></p>
+                    </div>
+
+                    <div class="pt-2">
+                        <button onclick="restartGame()" class="bg-[#3498DB] hover:bg-blue-600 active:scale-95 text-white font-bold px-6 py-3 rounded-xl shadow transition-all text-sm sm:text-base w-full">
+                            Play Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function restartGame() {
+        state.currentProblemIdx = 0;
+        state.results = [];
+        loadNextProblem();
+    }
+
+    // Initial Launch
+    window.addEventListener('DOMContentLoaded', () => {
+        loadNextProblem();
+    });
+  </script>
+</body>
+</html>
