@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Full Grid Pattern Reasoning Task</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { user-select: none; -webkit-user-select: none; }
+        button, select, input { touch-action: manipulation; }
+    </style>
+</head>
+<body class="bg-[#F5F5F7] text-slate-800 font-sans min-h-screen flex flex-col items-center p-2 sm:p-6">
+
+  <div id="app" class="w-full max-w-3xl bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200 flex flex-col min-h-[650px]">
+    <!-- Dynamic Content Injected Here -->
+  </div>
+
+  <script>
+    // ==========================================
+    // CONFIGURATION & MAPPINGS
+    // ==========================================
+    const CANVAS_SIZE = 90;
+    const CELL_PADDING = 5;
+
+    const COLOR_MAP = {
+        "R": "#E74C3C",  // Red
+        "B": "#3498DB",  // Blue
+        "G": "#2ECC71",  // Green
+        "Y": "#F1C40F",  // Yellow
+        "P": "#9B59B6",  // Purple
+        "O": "#E67E22",  // Orange
+    };
+
+    const SHAPE_MAP = {
+        "C": "circle",
+        "S": "square",
+        "T": "triangle",
+        "A": "star"
+    };
+
+    const PATTERN_MAP = {
+        "S": "solid",
+        "O": "outline",
+        "R": "striped",
+        "D": "dotted"
+    };
+
+    const DEFAULT_ATTRS = {
+        "shape": "circle",
+        "color": COLOR_MAP["B"],
+        "count": 1,
+        "pattern": "solid",
+        "position": "center",
+        "inside_color": null
+    };
+
+    // ==========================================
+    // COMPACT NOTATION PARSER
+    // ==========================================
+    function parseSpec(specStr) {
+        if (!specStr) return null;
+        let spec = specStr.toUpperCase().trim();
+        let attrs = { ...DEFAULT_ATTRS };
+
+        if (spec.includes("-")) {
+            let parts = spec.split("-");
+            spec = parts[0];
+            let coreCode = parts[1];
+            if (COLOR_MAP[coreCode]) {
+                attrs.inside_color = COLOR_MAP[coreCode];
+            }
+        }
+
+        if (spec.includes(":")) {
+            let parts = spec.split(":");
+            spec = parts[0];
+            let patCode = parts[1];
+            if (PATTERN_MAP[patCode]) {
+                attrs.pattern = PATTERN_MAP[patCode];
+            }
+        }
+
+        if (spec.length >= 3) {
+            let colorCode = spec[0];
+            let countCode = spec[1];
+            let shapeCode = spec[2];
+
+            if (COLOR_MAP[colorCode]) attrs.color = COLOR_MAP[colorCode];
+            if (!isNaN(countCode)) attrs.count = parseInt(countCode);
+            if (SHAPE_MAP[shapeCode]) attrs.shape = SHAPE_MAP[shapeCode];
+        }
+
+        return attrs;
+    }
+
+    // ==========================================
+    // SVG DRAWING HELPER FOR GRID CELLS
+    // ==========================================
+    function generateCellSVG(attrDict) {
+        if (!attrDict) return `<svg width="${CANVAS_SIZE}" height="${CANVAS_SIZE}"></svg>`;
+
+        const shape = attrDict.shape || "circle";
+        const color = attrDict.color || "#3498DB";
+        const count = attrDict.count || 1;
+        const pattern = attrDict.pattern || "solid";
+        const insideColor = attrDict.inside_color || null;
+
+        const w = CANVAS_SIZE, h = CANVAS_SIZE;
+        const cx = w / 2, cy = h / 2;
+
+        let coords = [];
+        if (count === 1) {
+            coords = [[cx, cy]];
+        } else if (count === 2) {
+            coords = [[cx - 18, cy], [cx + 18, cy]];
+        } else if (count === 3) {
+            coords = [[cx - 18, cy + 12], [cx + 18, cy + 12], [cx, cy - 15]];
+        } else if (count === 4) {
+            coords = [[cx - 18, cy - 18], [cx + 18, cy - 18], [cx - 18, cy + 18], [cx + 18, cy + 18]];
+        }
+
+        const size = count > 1 ? 12 : 22;
+        let fill = (pattern === "solid" || pattern === "striped") ? color : "none";
+        let stroke = color;
+        let strokeWidth = pattern !== "solid" ? 2 : 1;
+        let strokeDash = pattern === "dotted" ? "4,4" : "";
+
+        let svgShapes = '';
+
+        coords.forEach(([px, py]) => {
+            if (shape === "circle") {
+                svgShapes += `<circle cx="${px}" cy="${py}" r="${size}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}"/>`;
+            } else if (shape === "square") {
+                svgShapes += `<rect x="${px - size}" y="${py - size}" width="${size * 2}" height="${size * 2}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}"/>`;
+            } else if (shape === "triangle") {
+                const points = `${px},${py - size} ${px + size},${py + size} ${px - size},${py + size}`;
+                svgShapes += `<polygon points="${points}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}"/>`;
+            } else if (shape === "star") {
+                let pts = [];
+                for (let i = 0; i < 10; i++) {
+                    let r = (i % 2 === 0) ? size : size
