@@ -139,4 +139,330 @@
             } else if (shape === "star") {
                 let pts = [];
                 for (let i = 0; i < 10; i++) {
-                    let r = (i % 2 === 0) ? size : size
+                    let r = (i % 2 === 0) ? size : size / 2;
+                    let angle = i * Math.PI / 5;
+                    pts.push(`${px + r * Math.sin(angle)},${py - r * Math.cos(angle)}`);
+                }
+                svgShapes += `<polygon points="${pts.join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}"/>`;
+            }
+
+            if (pattern === "striped") {
+                svgShapes += `<line x1="${px - size/2}" y1="${py}" x2="${px + size/2}" y2="${py}" stroke="#FFFFFF" stroke-width="2"/>`;
+            }
+
+            if (insideColor) {
+                let coreSize = Math.max(3, size / 3);
+                svgShapes += `<circle cx="${px}" cy="${py}" r="${coreSize}" fill="${insideColor}" stroke="#333333" stroke-width="1"/>`;
+            }
+        });
+
+        return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" class="bg-white">${svgShapes}</svg>`;
+    }
+
+    // ==========================================
+    // TRIALS DATASET
+    // ==========================================
+    const CUSTOM_TRIALS = [
+        [
+            [["R1C", "B2C", "G3S"], ["P1S", "O2C", "R3S"], ["B1T", "B2T", "B3T"]],
+            ["Shape counts increase from left to right", "Colors loop in an alternating pattern", "Rows are organized by vertical weight"],
+            0
+        ],
+        [
+            [["B4T", "O3T", "P2T"], ["P4C", "P2C", "G1C"], ["R3A", "R2A", "R1A"]],
+            ["Shape counts decrease downwards", "Row totals are uniform across cells", "Shape counts decrease from left to right"],
+            2
+        ],
+        [
+            [["R1T", "B1C", "G1C"], ["R2A", "B2T", "G2A"], ["R3A", "B3T", "G3C"]],
+            ["Numbers increase sequentially across columns", "All rows share the same number", "All rows share the same color"],
+            0
+        ],
+        [
+            [["R1T:OR-P", "B1A:OR-P", "O1S:OR-P"], ["B1S:OR-O", "P1T:OR-O", "R1S:OR-O"], ["B1A:OR-R", "G1C:OR-R", "P1T:OR-R"]],
+            ["Columns group items by shape", "Rows share the same inner core color", "Rows use ascending stroke widths"],
+            1
+        ],
+        [
+            [["Y2C", "Y2A", "B2C"], ["P4C", "B1A", "G1A"], ["R1C", "O2C", "R3A"]],
+            ["Column shape counts sum to 6", "Row shape counts sum to 6", "Shape counts are symmetrical diagonally"],
+            1
+        ],
+        [
+            [["Y2T", "G1C", "R2T"], ["G1A", "R3S", "Y1A"], ["R1A", "Y1C", "G3T"]],
+            ["Each row contains every color once", "Row counts follow a geometric sequence", "Each column adds up to four"],
+            0
+        ],
+        [
+            [["Y1C", "O4T", "R2C"], ["B2S", "G1A", "Y4T"], ["R2T", "P3A", "B2T"]],
+            ["Columns and rows share color balance", "Rows mix primary and secondary colors evenly", "Columns are ordered by complexity"],
+            1
+        ],
+        [
+            [["R1C", "R2S", "R3T"], ["B1S", "B2T", "B3C"], ["G1T", "G2C", "G3S"]],
+            ["Each row keeps one color while counts increase", "Columns lock shape families", "Colors cycle diagonally"],
+            0
+        ],
+        [
+            [["P2C", "P2C", "P2C"], ["Y3S", "Y3S", "Y3S"], ["B1T", "B1T", "B1T"]],
+            ["Columns contain identical configurations", "Rows contain identical duplicated cells", "Values mirror across diagonals"],
+            1
+        ],
+        [
+            [["R1C", "G1C", "B1C"], ["R2S", "G2S", "B2S"], ["R3T", "G3T", "B3T"]],
+            ["Columns keep colors while rows change shapes", "Rows keep colors while columns change shapes", "Columns keep numbers while rows keep shapes"],
+            0
+        ],
+        [
+            [["B1T", "B2S", "B2A"], ["G1T", "G2S", "G3A"], ["R1T", "R3S", "R3A"]],
+            ["Colors are constant across columns", "Row numbers increase sequentially", "Shape point counts increase sequentially"],
+            2
+        ],
+        [
+            [["O2S", "P2S", "B2S"], ["O3C", "P3C", "B3C"], ["O1T", "P1T", "B1T"]],
+            ["Columns keep base colors while rows keep shapes and counts", "Columns keep base colors with constant row counts", "Columns keep base colors with constant row shapes"],
+            0
+        ],
+        [
+            [["Y1C", "Y2C", "Y3C"], ["B1C", "B2C", "B3C"], ["R1C", "R2C", "R3C"]],
+            ["Rows are sorted by shape and number", "Rows are sorted by color and shape", "Rows are sorted by color and columns by number"],
+            2
+        ],
+        [
+            [["G2C-O", "G2S-G", "G2T-R"], ["B1C-P", "B1S-R", "B1T-Y"], ["R3C-B", "R3S-O", "R3T-P"]],
+            ["Rows anchor core colors while rotating shapes", "Rows feature randomized configuration markers", "Columns are sorted by color"],
+            0
+        ],
+        [
+            [["P4A", "O3A", "R2A"], ["R2C", "P3C", "O4C"], ["O1S", "R2S", "P3S"]],
+            ["Rows are sorted by shape", "Colors form a pattern on all diagonals", "Columns are sorted by color"],
+            0
+        ],
+        [
+            [["B1C", "P1C", "Y1C"], ["B2S", "P2S", "Y2S"], ["B3T", "P3T", "Y3T"]],
+            ["Columns keep base colors while rows advance counts and shapes", "Columns are sorted by color", "Coloumns are sorted by row"],
+            1
+        ],
+        [
+            [["R3T:R", "R3T:B", "R3T:G"], ["G2C:R", "G2C:B", "G2C:G"], ["B1S:R", "B1S:B", "B1S:G"]],
+            ["Columns are sorted by color", "Rows are sorted by shape", "Rows are sorted by internal core color"],
+            1
+        ],
+        [
+            [["Y1S:O", "B2S:O", "R3S:O"], ["P1C:R", "G2C:R", "Y3C:R"], ["B1T:D", "R2T:D", "P3T:D"]],
+            ["Columns are grouped by number", "Columns are grouped by color", "The lines of the shapes are dependent on the color"],
+            0
+        ],
+        [
+            [["R2C", "G1C", "B2C"], ["R4C", "G3C", "B1C"], ["R2C", "G2C", "B3C"]],
+            ["Rows have identical shapes", "Rows all add up to 7", "Columns have consistent colors"],
+            2
+        ],
+        [
+            [["O1A", "O2A", "O3A"], ["P1A", "P2A", "P3A"], ["B1A", "B2A", "B3A"]],
+            ["Rows keep base colors while counts go from 1 to 3", "Shapes are randomized in every cell", "Counts descend from right to left"],
+            0
+        ],
+        [
+            [["G3C-R", "B3C-R", "R3C-R"], ["G2S-Y", "B2S-Y", "R2S-Y"], ["G1T-B", "B1T-B", "R1T-B"]],
+            ["Columns are organized by core color", "Rows are organized by main color", "Columns are organized by shape"],
+            1
+        ],
+        [
+            [["R1C", "P2S", "B1C"], ["B2S", "Y1C", "B2S"], ["R1C", "P2S", "B1C"]],
+            ["Pattern is mirrored diagonally", "Pattern is mirrored vertically", "Pattern is mirrored horizontally"],
+            2
+        ],
+        [
+            [["Y4C", "Y3C", "Y2C"], ["B4S", "B3S", "B2S"], ["R4T", "R3T", "R2T"]],
+            ["Counts descend from 4 to 2 across rows", "Counts ascend progressively left to right", "Shape types are randomized"],
+            0
+        ],
+        [
+            [["P1A:D", "P1A:O", "P1A:S"], ["G2C:D", "G2C:O", "G2C:S"], ["R3S:D", "R3S:O", "R3S:S"]],
+            ["Columns cycle patterns (Dotted -> Outline -> Solid)", "Patterns remain static per row", "Base colors mutate across columns"],
+            0
+        ],
+        [
+            [["B2C-R", "B2C-Y", "B2C-G"], ["P3S-R", "P3S-Y", "P3S-G"], ["O1T-R", "O1T-Y", "O1T-G"]],
+            ["Core colors cycle across columns while row properties stay fixed", "No governing pattern controls the grid", "Rows share matching internal core colors"],
+            0
+        ]
+    ];
+
+    // ==========================================
+    // STATE MANAGEMENT
+    // ==========================================
+    let state = {
+        currentTrialIdx: 0,
+        results: [],
+        startTime: 0,
+        shuffledOptions: [],
+        correctIdx: 0,
+        answered: false
+    };
+
+    function shuffle(array) {
+        let arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    // ==========================================
+    // GAME CONTROLLER
+    // ==========================================
+    function loadTrial(idx) {
+        if (idx >= CUSTOM_TRIALS.length) {
+            showSummary();
+            return;
+        }
+
+        state.currentTrialIdx = idx;
+        state.answered = false;
+
+        const [gridSpecs, optionTexts, correctOriginalIdx] = CUSTOM_TRIALS[idx];
+
+        const indexedOptions = optionTexts.map((text, i) => ({ text, originalIdx: i }));
+        const shuffled = shuffle(indexedOptions);
+
+        state.shuffledOptions = shuffled.map(o => o.text);
+        state.correctIdx = shuffled.findIndex(o => o.originalIdx === correctOriginalIdx);
+
+        renderTrialUI(gridSpecs);
+        state.startTime = performance.now();
+    }
+
+    function handleAnswer(selectedIdx) {
+        if (state.answered) return;
+        state.answered = true;
+
+        const rt = performance.now() - state.startTime;
+        const isCorrect = (selectedIdx === state.correctIdx);
+
+        state.results.push({ correct: isCorrect, rt: rt });
+
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach((btn, i) => {
+            btn.disabled = true;
+            if (i === state.correctIdx) {
+                btn.className = "w-full text-left bg-emerald-500 text-white font-bold p-3 sm:p-4 rounded-xl shadow transition-all border border-emerald-600";
+            } else if (i === selectedIdx && !isCorrect) {
+                btn.className = "w-full text-left bg-rose-500 text-white font-bold p-3 sm:p-4 rounded-xl shadow transition-all border border-rose-600";
+            } else {
+                btn.className = "w-full text-left bg-slate-100 text-slate-400 p-3 sm:p-4 rounded-xl border border-slate-200 opacity-60";
+            }
+        });
+
+        const feedbackEl = document.getElementById('feedback-text');
+        if (isCorrect) {
+            feedbackEl.innerHTML = `<span class="text-emerald-600 font-bold">CORRECT! Option ${selectedIdx + 1} matches the rule.</span>`;
+        } else {
+            feedbackEl.innerHTML = `<span class="text-rose-600 font-bold">INCORRECT! Correct rule was Option ${state.correctIdx + 1}.</span>`;
+        }
+
+        setTimeout(() => {
+            loadTrial(state.currentTrialIdx + 1);
+        }, 1500);
+    }
+
+    // ==========================================
+    // UI RENDERING
+    // ==========================================
+    function renderTrialUI(gridSpecs) {
+        let parsedGrid = [];
+        for (let r = 0; r < 3; r++) {
+            let rowNodes = [];
+            for (let c = 0; c < 3; c++) {
+                rowNodes.push(parseSpec(gridSpecs[r][c]));
+            }
+            parsedGrid.push(rowNodes);
+        }
+
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <!-- Header Bar -->
+            <div class="bg-white border-b border-slate-200 py-3 px-4 sm:px-6 flex justify-between items-center shrink-0">
+                <h1 class="text-sm sm:text-base font-bold text-slate-800">Complete Grid Pattern Task</h1>
+                <span id="lbl-progress" class="text-xs sm:text-sm font-semibold text-slate-600">Trial: ${state.currentTrialIdx + 1}/${CUSTOM_TRIALS.length}</span>
+            </div>
+
+            <!-- Main Container -->
+            <div class="flex-grow p-4 sm:p-8 flex flex-col items-center justify-center space-y-6">
+                <div class="w-full max-w-xl text-center space-y-5">
+                    <h2 class="text-sm sm:text-base font-bold text-slate-700">Identify the correct governing pattern/rule for this grid:</h2>
+
+                    <!-- 3x3 Grid Display -->
+                    <div class="inline-block bg-[#333333] p-2 rounded-xl shadow-md border-2 border-slate-700">
+                        <div class="grid grid-cols-3 gap-1.5">
+                            ${parsedGrid.map((row, r) => row.map((cell, c) => `
+                                <div class="bg-white rounded overflow-hidden flex items-center justify-center shadow-inner" style="width: ${CANVAS_SIZE}px; height: ${CANVAS_SIZE}px;">
+                                    ${generateCellSVG(cell)}
+                                </div>
+                            `).join('')).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Options Grid -->
+                    <div class="space-y-2 sm:space-y-3 pt-2">
+                        ${state.shuffledOptions.map((text, i) => `
+                            <button onclick="handleAnswer(${i})" class="option-btn w-full text-left bg-white hover:bg-sky-50 active:scale-[0.99] text-slate-700 font-semibold p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 transition-all flex items-center justify-between">
+                                <span>Option ${i + 1}: <strong class="text-slate-900">${text}</strong></span>
+                                <span class="text-xs text-slate-400 font-mono">Select ➔</span>
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div id="feedback-text" class="min-h-[28px] text-sm font-medium"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function showSummary() {
+        const total = state.results.length;
+        const correctCnt = state.results.filter(r => r.correct).length;
+        const acc = total > 0 ? (correctCnt / total) * 100 : 0;
+        const meanRt = total > 0 ? state.results.reduce((a, b) => a + b.rt, 0) / total : 0;
+
+        let summaryText = `Overall Accuracy: ${acc.toFixed(1)}% (${correctCnt}/${total})\nMean RT: ${meanRt.toFixed(0)} ms\n--------------------------------------------------\n`;
+        state.results.forEach((res, i) => {
+            const status = res.correct ? "Correct" : "Incorrect";
+            summaryText += `Trial ${String(i + 1).padStart(2, '0')}: ${status.padEnd(9)} | Response Time: ${res.rt.toFixed(0).padStart(5)} ms\n`;
+        });
+
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div class="bg-white border-b border-slate-200 py-3 px-4 sm:px-6 flex justify-between items-center shrink-0">
+                <h1 class="text-sm sm:text-base font-bold text-slate-800">Complete Grid Pattern Task</h1>
+                <span class="text-xs sm:text-sm font-semibold text-emerald-600">Complete</span>
+            </div>
+
+            <div class="flex-grow p-4 sm:p-8 flex flex-col items-center justify-center space-y-6">
+                <div class="w-full max-w-2xl bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4 text-center">
+                    <h2 class="text-2xl font-bold text-slate-800">Task Completed!</h2>
+                    <p class="text-sm sm:text-base font-medium text-slate-600">
+                        Overall Accuracy: <strong class="text-slate-900">${acc.toFixed(1)}% (${correctCnt}/${total})</strong> | Mean Response Time: <strong class="text-slate-900">${meanRt.toFixed(0)} ms</strong>
+                    </p>
+
+                    <textarea readonly class="w-full h-64 bg-slate-50 text-slate-700 font-mono text-xs p-3 rounded-xl border border-slate-200 resize-none focus:outline-none">${summaryText}</textarea>
+
+                    <div class="flex justify-center pt-2">
+                        <button onclick="navigator.clipboard.writeText(document.querySelector('textarea').value); alert('Results copied to clipboard!');" class="bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl shadow transition-all text-sm">
+                            📋 Copy Results to Clipboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Initial Launch
+    window.addEventListener('DOMContentLoaded', () => {
+        loadTrial(0);
+    });
+  </script>
+</body>
+</html>
