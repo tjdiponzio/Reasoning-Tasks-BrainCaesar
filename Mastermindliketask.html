@@ -38,7 +38,7 @@
         currentTrial: 1,
         trialResults: [],
         secretCode: [],
-        currentGuess: Array(4).fill(null).map(() => ({ shape: SHAPES[0], color: COLOR_NAMES[0] })),
+        currentGuess: Array(4).fill(null).map(() => ({ shape: SHAPES[0], color: COLOR_NAMES[0], keep: false })),
         turn: 0,
         previousGuess: null,
         previousFeedback: null,
@@ -88,3 +88,290 @@
     }
 
     // ==========================================
+    // GAME CONTROLLER LOGIC
+    // ==========================================
+    function startNewTrial() {
+        state.turn = 0;
+        state.previousGuess = null;
+        state.previousFeedback = null;
+        state.validFeedbackTransitions = 0;
+        state.ruleCompliantTransitions = 0;
+        state.history = [];
+
+        // Generate new random secret code
+        state.secretCode = Array(4).fill(0).map(() => ({
+            shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
+            color: COLOR_NAMES[Math.floor(Math.random() * COLOR_NAMES.length)]
+        }));
+
+        // Reset current guess slots
+        state.currentGuess = Array(4).fill(0).map(() => ({
+            shape: SHAPES[0],
+            color: COLOR_NAMES[0],
+            keep: false
+        }));
+
+        state.trialStartTime = Date.now();
+        renderGameUI();
+    }
+
+    function evaluateFeedback(guess) {
+        let feedback = [];
+        for (let i = 0; i < 4; i++) {
+            const shapeCorrect = (guess[i].shape === state.secretCode[i].shape);
+            const colorCorrect = (guess[i].color === state.secretCode[i].color);
+
+            const symbol = shapeCorrect ? "O" : "X";
+            const colorHex = colorCorrect ? "#3498DB" : "#E67E22";
+            feedback.push({ symbol, colorHex });
+        }
+        return feedback;
+    }
+
+    function checkRuleCompliance(newGuess, prevGuess, prevFeedback) {
+        for (let i = 0; i < 4; i++) {
+            const { symbol, colorHex } = prevFeedback[i];
+
+            if (symbol === "O" && newGuess[i].shape !== prevGuess[i].shape) return false;
+            if (symbol === "X" && newGuess[i].shape === prevGuess[i].shape) return false;
+
+            if (colorHex === "#3498DB" && newGuess[i].color !== prevGuess[i].color) return false;
+            if (colorHex === "#E67E22" && newGuess[i].color === prevGuess[i].color) return false;
+        }
+        return true;
+    }
+
+    function submitGuess() {
+        state.turn++;
+        const guessSnapshot = state.currentGuess.map(item => ({ ...item }));
+        const feedback = evaluateFeedback(guessSnapshot);
+
+        if (state.previousGuess && state.previousFeedback) {
+            state.validFeedbackTransitions++;
+            if (checkRuleCompliance(guessSnapshot, state.previousGuess, state.previousFeedback)) {
+                state.ruleCompliantTransitions++;
+            }
+        }
+
+        state.previousGuess = guessSnapshot;
+        state.previousFeedback = feedback;
+
+        state.history.push({
+            turn: state.turn,
+            guess: guessSnapshot,
+            feedback: feedback
+        });
+
+        const isWin = feedback.every(f => f.symbol === "O" && f.colorHex === "#3498DB");
+
+        if (isWin || state.turn >= MAX_TURNS_PER_TRIAL) {
+            const duration = (Date.now() - state.trialStartTime) / 1000;
+            const complianceRate = state.validFeedbackTransitions > 0 
+                ? (state.ruleCompliantTransitions / state.validFeedbackTransitions) * 100 
+                : 100.0;
+
+            state.trialResults.push({
+                trial: state.currentTrial,
+                attempts: state.turn,
+                solved: isWin,
+                compliance_rate: complianceRate,
+                duration: duration
+            });
+
+            if (state.currentTrial < TOTAL_TRIALS) {
+                state.currentTrial++;
+                startNewTrial();
+            } else {
+                state.isFinished = true;
+                prepareSummaryReport();
+                renderSummaryUI();
+            }
+        } else {
+            renderGameUI();
+            setTimeout(() => {
+                const container = document.getElementById('history-scroll');
+                if (container) container.scrollTop = container.scrollHeight;
+            }, 50);
+        }
+    }
+
+    function applyBulkSelection() {
+        const targetShape = document.getElementById('bulk-shape').value;
+        const targetColor = document.getElementById('bulk-color').value;
+
+        for (let i = 0; i < 4; i++) {
+            if (!state.currentGuess[i].keep) {
+                state.currentGuess[i].shape = targetShape;
+                state.currentGuess[i].color = targetColor;
+            }
+        }
+        renderGameUI();
+    }
+
+    function updateSlot(idx, field, val) {
+        state.currentGuess[idx][field] = val;
+    }
+
+    function toggleKeep(idx) {
+        state.currentGuess[idx].keep = !state.currentGuess[idx].keep;
+    }
+
+    // ==========================================
+    // UI RENDERING
+    // ==========================================
+    function renderGameUI() {
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <!-- Header Bar -->
+            <div class="bg-[#2C3E50] py-3 px-4 text-center text-white shrink-0">
+                <h1 class="text-lg sm:text-xl font-bold tracking-wide">Trial ${state.currentTrial} of ${TOTAL_TRIALS}</h1>
+                <p class="text-xs sm:text-sm text-slate-300">Turn: ${state.turn + 1} / ${MAX_TURNS_PER_TRIAL}</p>
+            </div>
+
+            <!-- History Scrollable Area -->
+            <div id="history-scroll" class="flex-grow overflow-y-auto p-3 sm:p-4 space-y-2 bg-white border-b border-slate-200">
+                ${state.history.length === 0 ? `
+                    <div class="text-center text-slate-400 py-8 text-sm italic">
+                        Make your first guess below. Match the secret 4-item code!<br>
+                        <span class="text-xs text-slate-500">O = Correct Shape | X = Wrong Shape<br>Blue = Correct Color | Orange = Wrong Color</span>
+                    </div>
+                ` : state.history.map(h => `
+                    <div class="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-sm text-xs sm:text-sm">
+                        <span class="font-bold text-slate-500 w-6">#${h.turn}</span>
+                        <div class="flex gap-1.5 sm:gap-2">
+                            ${h.guess.map(item => `
+                                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center shadow-inner">
+                                    ${generateSVG(item.shape, COLORS[item.color], 28)}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 bg-[#2C3E50] p-1.5 rounded-lg text-white font-mono text-[10px] sm:text-xs">
+                            ${h.feedback.map(f => `<span class="w-4 text-center font-bold" style="color: ${f.colorHex}">${f.symbol}</span>`).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- Input Controls Panel -->
+            <div class="bg-[#F4F6F7] p-3 sm:p-4 shrink-0 border-t border-slate-200">
+                <div class="bg-[#EAECEE] p-2 rounded-xl mb-3 flex flex-wrap items-center justify-between gap-2 border border-slate-300">
+                    <span class="text-xs font-bold text-slate-700">Set All Unlocked:</span>
+                    <div class="flex gap-1.5">
+                        <select id="bulk-shape" class="bg-white border border-slate-300 rounded text-xs px-2 py-1">
+                            ${SHAPES.map(s => `<option value="${s}">${s}</option>`).join('')}
+                        </select>
+                        <select id="bulk-color" class="bg-white border border-slate-300 rounded text-xs px-2 py-1">
+                            ${COLOR_NAMES.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                        <button onclick="applyBulkSelection()" class="bg-[#34495E] hover:bg-slate-700 text-white text-xs font-bold px-3 py-1 rounded shadow">Apply</button>
+                    </div>
+                </div>
+
+                <!-- 4 Slots Grid -->
+                <div class="grid grid-cols-4 gap-2 mb-3">
+                    ${state.currentGuess.map((slot, i) => `
+                        <div class="bg-[#EAECEE] p-2 rounded-xl border border-slate-300 flex flex-col items-center gap-1.5">
+                            <div class="w-10 h-10 bg-white rounded-lg border border-slate-200 flex items-center justify-center shadow-inner">
+                                ${generateSVG(slot.shape, COLORS[slot.color], 30)}
+                            </div>
+                            <select onchange="updateSlot(${i}, 'shape', this.value)" class="w-full bg-white border border-slate-300 rounded text-[10px] sm:text-xs py-0.5 px-1">
+                                ${SHAPES.map(s => `<option value="${s}" ${s === slot.shape ? 'selected' : ''}>${s}</option>`).join('')}
+                            </select>
+                            <select onchange="updateSlot(${i}, 'color', this.value)" class="w-full bg-white border border-slate-300 rounded text-[10px] sm:text-xs py-0.5 px-1">
+                                ${COLOR_NAMES.map(c => `<option value="${c}" ${c === slot.color ? 'selected' : ''}>${c}</option>`).join('')}
+                            </select>
+                            <label class="flex items-center gap-1 text-[10px] font-bold text-slate-700 cursor-pointer mt-0.5">
+                                <input type="checkbox" ${slot.keep ? 'checked' : ''} onchange="toggleKeep(${i})" class="rounded text-slate-700 focus:ring-0"> Keep 🔒
+                            </label>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- Submit Button -->
+                <button onclick="submitGuess()" class="w-full bg-[#2ECC71] hover:bg-green-600 active:scale-[0.99] text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm sm:text-base">
+                    Submit Guess
+                </button>
+            </div>
+        `;
+    }
+
+    function prepareSummaryReport() {
+        const attemptsList = state.trialResults.map(t => t.attempts);
+        const complianceList = state.trialResults.map(t => t.compliance_rate);
+        const solvedCnt = state.trialResults.filter(t => t.solved).length;
+
+        const [meanAttempts, stdAttempts] = calculateStats(attemptsList);
+        const [meanCompliance, stdCompliance] = calculateStats(complianceList);
+
+        let reportLines = [
+            "===========================================",
+            " EXECUTIVE FUNCTIONING TASK RESULTS (10 TRIALS) ",
+            "===========================================",
+            `Solved Trials: ${solvedCnt} / ${TOTAL_TRIALS}`,
+            `Mean Attempts: ${meanAttempts.toFixed(2)} (Std Dev: ${stdAttempts.toFixed(2)})`,
+            `Rule Compliance / Feedback Understanding: ${meanCompliance.toFixed(1)}% (Std Dev: ${stdCompliance.toFixed(1)}%)`,
+            "-------------------------------------------",
+            "Trial Details:",
+            "Trial | Attempts | Solved | Compliance Rate | Time (s)"
+        ];
+
+        state.trialResults.forEach(r => {
+            reportLines.push(
+                `  ${String(r.trial).padEnd(3)} |    ${String(r.attempts).padEnd(4)}  | ${String(r.solved).padEnd(6)} |      ${r.compliance_rate.toFixed(1).padStart(5)}%     |  ${r.duration.toFixed(1)}s`
+            );
+        });
+
+        state.fullReportText = reportLines.join('\n');
+    }
+
+    function renderSummaryUI() {
+        const attemptsList = state.trialResults.map(t => t.attempts);
+        const complianceList = state.trialResults.map(t => t.compliance_rate);
+        const solvedCnt = state.trialResults.filter(t => t.solved).length;
+        const [meanAttempts, stdAttempts] = calculateStats(attemptsList);
+        const [meanCompliance, stdCompliance] = calculateStats(complianceList);
+
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div class="flex flex-col h-full p-4 sm:p-6 overflow-y-auto bg-white">
+                <h2 class="text-xl sm:text-2xl font-bold text-[#2C3E50] mb-2 text-center">Task Completed!</h2>
+                <p class="text-xs sm:text-sm text-slate-500 text-center mb-4">All 10 trials have been successfully executed.</p>
+
+                <div class="flex justify-center mb-4">
+                    <button onclick="copyResultsToClipboard()" class="bg-[#3498DB] hover:bg-blue-600 active:scale-95 text-white font-bold px-4 py-2 rounded-xl shadow transition-all text-xs sm:text-sm flex items-center gap-2">
+                        📋 Copy Results to Clipboard
+                    </button>
+                </div>
+
+                <div class="bg-[#F8F9F9] border border-slate-200 p-4 rounded-xl mb-4 shadow-sm">
+                    <h3 class="font-bold text-slate-700 text-xs sm:text-sm uppercase tracking-wide mb-2">Performance Summary</h3>
+                    <ul class="space-y-1 text-xs sm:text-sm text-slate-600 font-medium">
+                        <li>• Solved Trials: <strong class="text-slate-800">${solvedCnt} / ${TOTAL_TRIALS}</strong></li>
+                        <li>• Mean Attempts per Trial: <strong class="text-slate-800">${meanAttempts.toFixed(2)}</strong> (Std Dev: ${stdAttempts.toFixed(2)})</li>
+                        <li>• Rule Compliance: <strong class="text-slate-800">${meanCompliance.toFixed(1)}%</strong> (Std Dev: ${stdCompliance.toFixed(1)}%)</li>
+                    </ul>
+                </div>
+
+                <div class="flex-grow flex flex-col min-h-[200px]">
+                    <span class="text-xs font-bold text-slate-500 mb-1">Detailed Report:</span>
+                    <textarea readonly class="w-full flex-grow bg-[#F2F4F4] text-slate-700 font-mono text-[11px] sm:text-xs p-3 rounded-xl border border-slate-300 resize-none focus:outline-none">${state.fullReportText}</textarea>
+                </div>
+            </div>
+        `;
+    }
+
+    function copyResultsToClipboard() {
+        navigator.clipboard.writeText(state.fullReportText).then(() => {
+            alert("Results report copied to clipboard successfully!");
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
+
+    // Initial Launch
+    window.addEventListener('DOMContentLoaded', () => {
+        startNewTrial();
+    });
+  </script>
+</body>
+</html>
