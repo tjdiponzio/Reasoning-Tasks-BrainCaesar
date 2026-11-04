@@ -146,3 +146,81 @@
                 <h1 class="text-sm sm:text-base font-bold text-slate-800">Algebraic Rule Deciphering Task</h1>
                 <span id="lbl-progress" class="text-xs sm:text-sm font-semibold text-slate-600">Trial: ${state.currentTrialIdx + 1}/${CUSTOM_TRIALS.length}</span>
             </div>
+
+            <!-- Main Container -->
+            <div class="flex-grow p-4 sm:p-8 flex flex-col items-center justify-center space-y-6">
+                <div class="w-full max-w-xl text-center space-y-5">
+                    <h2 class="text-sm sm:text-base font-bold text-slate-700">Analyze the sequence and find the missing value:</h2>
+
+                    <!-- Sequence Box Grid -->
+                    <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+                        ${sequence.map(val => `
+                            <div class="w-12 h-12 sm:w-16 sm:h-16 bg-sky-500 text-white font-extrabold text-lg sm:text-2xl rounded-xl shadow-md flex items-center justify-center border-b-4 border-sky-700">
+                                ${val}
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <h3 class="text-sm sm:text-base font-bold text-slate-700 pt-4">Select the correct number that fits the rule governing this sequence:</h3>
+
+                    <!-- Options Grid -->
+                    <div class="space-y-2 sm:space-y-3">
+                        ${state.shuffledOptions.map((text, i) => `
+                            <button onclick="handleAnswer(${i})" class="option-btn w-full text-left bg-white hover:bg-sky-50 active:scale-[0.99] text-slate-700 font-semibold p-3 sm:p-4 rounded-xl shadow-sm border border-slate-200 transition-all flex items-center justify-between">
+                                <span>Option ${i + 1}: <strong class="text-slate-900">${text}</strong></span>
+                                <span class="text-xs text-slate-400 font-mono">Select ➔</span>
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div id="feedback-text" class="min-h-[28px] text-sm font-medium"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function showSummary() {
+        const total = state.results.length;
+        const correctCnt = state.results.filter(r => r.correct).length;
+        const acc = total > 0 ? (correctCnt / total) * 100 : 0;
+        const meanRt = total > 0 ? state.results.reduce((a, b) => a + b.rt, 0) / total : 0;
+
+        let summaryText = `Overall Accuracy: ${acc.toFixed(1)}% (${correctCnt}/${total})\nMean RT: ${meanRt.toFixed(0)} ms\n--------------------------------------------------\n`;
+        state.results.forEach((res, i) => {
+            const status = res.correct ? "Correct" : "Incorrect";
+            summaryText += `Trial ${String(i + 1).padStart(2, '0')}: ${status.padEnd(9)} | Response Time: ${res.rt.toFixed(0).padStart(5)} ms\n`;
+        });
+
+        const app = document.getElementById('app');
+        app.innerHTML = `
+            <div class="bg-white border-b border-slate-200 py-3 px-4 sm:px-6 flex justify-between items-center shrink-0">
+                <h1 class="text-sm sm:text-base font-bold text-slate-800">Algebraic Rule Deciphering Task</h1>
+                <span class="text-xs sm:text-sm font-semibold text-emerald-600">Complete</span>
+            </div>
+
+            <div class="flex-grow p-4 sm:p-8 flex flex-col items-center justify-center space-y-6">
+                <div class="w-full max-w-xl bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4 text-center">
+                    <h2 class="text-2xl font-bold text-slate-800">Task Completed!</h2>
+                    <p class="text-sm sm:text-base font-medium text-slate-600">
+                        Overall Accuracy: <strong class="text-slate-900">${acc.toFixed(1)}% (${correctCnt}/${total})</strong> | Mean Response Time: <strong class="text-slate-900">${meanRt.toFixed(0)} ms</strong>
+                    </p>
+
+                    <textarea readonly class="w-full h-48 bg-slate-50 text-slate-700 font-mono text-xs p-3 rounded-xl border border-slate-200 resize-none focus:outline-none">${summaryText}</textarea>
+
+                    <div class="flex justify-center pt-2">
+                        <button onclick="navigator.clipboard.writeText(document.querySelector('textarea').value); alert('Results copied to clipboard!');" class="bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold px-5 py-2.5 rounded-xl shadow transition-all text-sm">
+                            📋 Copy Results to Clipboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Initial Launch
+    window.addEventListener('DOMContentLoaded', () => {
+        loadTrial(0);
+    });
+  </script>
+</body>
+</html>
